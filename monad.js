@@ -74,8 +74,8 @@ const apply =
       GenA_B => GenA => /* GenB */
       {
           let resolve =
-              RandB => /* RandB */
-              RandB.val (RandB.seed);
+              RandGenB => /* RandB */
+              RandGenB.val (RandGenB.seed);
 
           return(
               resolve ['.'] (map (f => map (f) (GenA)) (GenA_B))
