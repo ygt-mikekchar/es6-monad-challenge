@@ -110,7 +110,7 @@ const List = {
     Array(Int).fill(A),
 
     head:
-    ListA => /* A */
+    ListA => /* MaybeA */
 
     ListA[0],
 
