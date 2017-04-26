@@ -130,8 +130,13 @@ const sequence =
       ListGenA => /* GenListA */
 
       {
-          let x = List.head (ListGenA);
-          let xs = List.tail (ListGenA);
+          let x =
+              /* MaybeA */
+              List.head (ListGenA);
+
+          let xs =
+              /* ListA */
+              List.tail (ListGenA);
 
           switch (x) {
           case undefined:
