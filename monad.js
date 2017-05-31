@@ -14,6 +14,9 @@
 //   - parentheses are used when needed to indicate parameters to functions,
 //     however all parameters are also separated by spaces.
 
+// Annoying CommonJS import because Node doesn't have ES6 modules
+const {repeat, cons} = List = require('./list.js');
+
 // Function composition
 const compose =
       (B_C) => (A_B) => A => /* C */
@@ -102,18 +105,6 @@ const lift2 =
       apply (map (A_B_C) (GenA)) (GenB);
 
 
-// A few list functions that I need.
-const List = {
-    repeat:
-    Int => A => /* ListA */
-
-    Array(Int).fill(A),
-
-    cons:
-    A => ListA => /* ListA */
-
-    [A].concat (ListA)
-};
 
 // Lift a list of generators into a list of random values
 const sequence =
@@ -127,7 +118,7 @@ const sequence =
               return pure ([]);
 
           default:
-              return apply (map (List.cons) (x)) (sequence (xs));
+              return apply (map (cons) (x)) (sequence (xs));
           }
       };
 
@@ -176,7 +167,7 @@ const randPair =
 const fiveRands =
       /* ArrayInt */
 
-      generate (sequence (List.repeat (5) (randInt))) (mkSeed (1));
+      generate (sequence (repeat (5) (randInt))) (mkSeed (1));
 
 
 // Return a string of 3 random Chars
@@ -184,7 +175,7 @@ const fiveRands =
 const randString3 =
       /* String */
 
-      (generate (sequence (List.repeat (3) (randChar))) (mkSeed (1))).join('');
+      (generate (sequence (repeat (3) (randChar))) (mkSeed (1))).join('');
 
 
 // Can't be bothered writing real tests.  Just outputting
