@@ -109,16 +109,6 @@ const List = {
 
     Array(Int).fill(A),
 
-    head:
-    ListA => /* MaybeA */
-
-    ListA[0],
-
-    tail:
-    ListA => /* ListA */
-
-    ListA.slice (1),
-
     cons:
     A => ListA => /* ListA */
 
@@ -130,13 +120,7 @@ const sequence =
       ListGenA => /* GenListA */
 
       {
-          let x =
-              /* MaybeA */
-              List.head (ListGenA);
-
-          let xs =
-              /* ListA */
-              List.tail (ListGenA);
+          let [x, ...xs] = ListGenA;
 
           switch (x) {
           case undefined:
