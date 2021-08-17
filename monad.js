@@ -6,76 +6,123 @@
 // Some Notation:
 //   - function names are in lower case.
 //   - parameters to functions are curried
-//   - parameters to functions are in *upper* case.
+//   - parameters to functions are in lower case.
 //   - parameters to functions are named after the type they represent
-//   - function parameters are named like (A_B), which would
+//   - function parameters are named like (a_b), which would
 //     correspond to the type (a -> b).
 //   - Return types are noted in comments.
 //   - parentheses are used when needed to indicate parameters to functions,
 //     however all parameters are also separated by spaces.
+//   - Whenever possible only a single expression per function.
+//   - Functions are contained in modules.
+
+const Test = {
+  expect: label => error => // console effect
+    console.log([(error === null) ? 'PASS' : `FAIL (${error})`, '-', label].join(' ')),
+  assert: type => a1 => a2 => // error
+    (type.eql (a1) (a2)) ? null : [a1, a2].map(a => type.print (a)).join(' : '),
+  eql: a1 => a2 => // bool
+    a1 === a2,
+  print: a => //string
+    `${a}`
+}
+
+const Num = {
+  eql: Test.eql,
+
+  print: Test.print
+};
+Num.assert = Test.assert (Num);
 
 
 // Useful list (array) methods
 const List = {
-  repeat: Int => A => // ListA
-  Array(Int).fill(A),
+  repeat: num => a => // List
+    Array(num).fill(a),
 
-  cons: A => ListA => // ListA
-  [A].concat (ListA),
+  cons: a => listA => // List
+    [a].concat (listA),
+
+  instance: a => // bool
+    a instanceof Array,
+
+  print: a => // string
+    List.instance (a) ? `[${a}]` : `${a}`,
+
+  eql: a1 => a2 => // bool
+    [a1, a2].every(a => List.instance (a)) && (`${a1}` === `${a2}`),
+};
+List.assert = Test.assert (List);
+
+const Tuple = {
+  pure: a => b => // tuple
+    [a, b],
+
+  assert: List.assert,
 }
 
 // Function composition
-const compose =
-      (B_C) => (A_B) => A => /* C */
-
-      B_C ((A_B) (A));
+const Fn = {
+  compose: (b_c) => (a_b) => a => // c
+    b_c ((a_b) (a)),
+};
 
 // Home made infix compose operator :-P
 // Use like this:
 //   f ["."] (g)
-Function.prototype['.'] =
-    function(A_B) {
-        return compose (this) (A_B);
-    };
+Function.prototype['.'] = function (a_b) { // a_c
+  return Fn.compose (this) (a_b); };
 
+// A seed for a random value generator
+const Seed = {
+  pure: num => // seed
+    num,
 
-// Return a "random" value given a seed.
-// This returns an record with `val` holding the "random" value
-// and `seed` holding the next seed.
-// Because this is a kata, my "random" number generator just returns
-// the value of the given seed and then increments the seed.
-const randInt =
-      Seed => /* RandInt */
-      // Note this signature is equivalent to GenInt
+  assert: Num.assert,
+};
 
-      ({ val: Seed, seed: Seed + 1 });
+// General functions for random values
+// A Rand is a tuple with the first element containing the value
+// and the second element containing the next seed.
+const Rand = {
+  // Create a Rand from a value and a seed
+  pure: a => seed => // rand
+    [a, seed],
 
+  // Apply a function to the `val` portion of a random value
+  map: a_b => ([val, seed]) => // rand
+    [a_b (val), seed],
 
-// Apply a function to the `val` portion of a random value
-const mapRand =
-      (A_B) => RandA => /* RandB */
+  value: rand => // a
+    rand[0],
 
-      ({ val: A_B (RandA.val), seed: RandA.seed });
+  seed: rand => // seed
+    rand[1],
 
+  assert: Tuple.assert
+};
 
-// Create a seed.  Currently implemented as an Int.
-const mkSeed =
-      Int => /* Seed */
-      Int;
+// Generates a random value containing a number
+// Because this is a kata the value is simple the seed and
+// the next seed is simply the current seed + 1
+// This means that successive random numbers increment by 1
+const RandNum = {
+  gen: seed => // rand
+    [seed, seed + 1],
+};
 
-
-// Retrun the `val` protion of a Rand produced from a GenA given a Seed.
+// Retrun the value of a Rand produced from a GenA given a Seed.
 const generate =
-      GenA => Seed => /* A */
+      genA => seed => /* a */
 
-      (GenA (Seed)).val;
+      Rand.value (genA (seed));
 
 
-// Lift the Rand from a GenA and apply a function to its `val`
+// Lift the Rand from a GenA and apply a function to its value
 const map =
       (A_B) => GenA => /* GenB */
 
-      (mapRand (A_B)) ['.'] (GenA);
+      (Rand.map (A_B)) ['.'] (GenA);
 
 
 // Apply the next argument to a partially applied function
@@ -85,24 +132,12 @@ const apply =
       {
           let resolve =
               RandGenB => /* RandB */
-              RandGenB.val (RandGenB.seed);
+              (Rand.value (RandGenB)) (Rand.seed (RandGenB));
 
           return(
               resolve ['.'] (map (f => map (f) (GenA)) (GenA_B))
           );
       };
-
-
-// Wrap a value so that the generator produces that value
-// when given a seed.
-// It seems a bit counterintuitive that this is needed, but
-// you need it for initialising wrapped arrays, etc.
-// This will *always* be used by currying the first parameter
-// resulting a function that returns a GenA
-const pure =
-      A => Seed => /* RandA */
-
-      ({ val: A, seed: Seed });
 
 
 // Lift 2 random values from generators and apply them to a function
@@ -122,7 +157,7 @@ const sequence =
 
           switch (x) {
           case undefined:
-              return pure ([]);
+              return Rand.pure ([]);
 
           default:
               return apply (map (List.cons) (x)) (sequence (xs));
@@ -130,68 +165,56 @@ const sequence =
       };
 
 
-// Generates an even random Int given a Seed.
-// Remember: GenInt == Seed => /* RandInt */
-const randEven =
-      /* GenInt */
+const RandEven = {
+  // Generates an even random Int given a Seed.
+  // Remember: GenNum.gen = seed => // rand
+  gen: seed => // rand
+    map (x => x * 2) (RandNum.gen),
+};
 
-      map (x => x * 2) (randInt);
+const Letter = {
+  fromNum: num => // letter
+    String.fromCharCode (num + 64),
+};
 
-
-// Return a "random" letter
-// Remember: GenChar == Seed => /* RandChar */
-const randChar =
-      /* GenChar */
-      function() {
-          let toChar =
-              Int => /* Char */
-
-              String.fromCharCode (Int + 64);
-
-          return(
-              map (toChar) (randInt)
-          );
-      }();
-
+const RandLetter = {
+  gen: seed => // rand
+    map (Letter.fromNum) (RandNum.gen),
+};
 
 // Generator for a tuple containing a random char and random int
-const randPair =
-      /* GenCharInt */
-      function() {
-          let newTuple =
-              A => B => /* TupleAB */
-
-              ({first: A, second: B});
-
-          return(
-              lift2 (newTuple) (randChar) (randInt)
-          );
-      }();
-
+const RandPair = {
+  gen: seed => // rand
+    lift2 (Tuple.pure) (RandLetter.gen) (RandNum.gen),
+};
 
 // Return an array of 5 random Ints.
 // With this implementation it should return [1,2,3,4,5]
 const fiveRands =
       /* ArrayInt */
 
-      generate (sequence (List.repeat (5) (randInt))) (mkSeed (1));
+      generate (sequence (List.repeat (5) (RandNum.gen))) (Seed.pure (1));
 
 
 // Return a string of 3 random Chars
 // With this implementation it should return 'ABC'
-const randString3 =
-      /* String */
+// const randString3 =
+//       /* String */
+// 
+//       (generate (sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
 
-      (generate (sequence (List.repeat (3) (randChar))) (mkSeed (1))).join('');
 
-
-// Can't be bothered writing real tests.  Just outputting
-// Some values to make sure it isn't broken.
-
-console.log (randInt (mkSeed (1)));
-console.log (generate (randInt) (mkSeed (1)));
-console.log (randEven (mkSeed (1)));
-console.log (randChar (mkSeed (1)));
-console.log (randPair (mkSeed (1)));
+Test.expect ('RandNum.gen')
+  (Rand.assert (RandNum.gen (Seed.pure (1)))
+    ([1, 2]))
+Test.expect ('generate')
+  (Num.assert (generate (RandNum.gen) (Seed.pure (1)))
+    (1))
+Test.expect ('RandEven.gen')
+  (Rand.assert (RandEven.gen (Seed.pure (1)))
+    ([1, 2]))
+console.log (RandEven.gen (Seed.pure (1)));
+console.log (RandLetter.gen (Seed.pure (1)));
+console.log (RandPair.gen (Seed.pure (1)));
 console.log (fiveRands);
-console.log (randString3);
+// console.log (randString3);
