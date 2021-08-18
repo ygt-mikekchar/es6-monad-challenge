@@ -141,19 +141,11 @@ const Gen = {
   apply: genA_B => genA => // GenB
     Rand.resolve ['.'] (Gen.map (a_b => Gen.map (a_b) (genA)) (genA_B)),
 
-  // Lift a list of generators into a list of random values
-  sequence: listGenA => // genListA
-    {
-        let [genA, ...genAs] = listGenA;
-
-        switch (genA) {
-        case undefined:
-            return Rand.pure ([]);
-
-        default:
-            return Gen.apply (Gen.map (List.cons) (genA)) (Gen.sequence (genAs));
-        }
-    },
+  // Lift a list of generators into a generator of a list of random values
+  sequence: ([genA, ...genAs]) => // genListA
+    (genA === undefined)
+      ? Rand.pure ([])
+      : Gen.apply (Gen.map (List.cons) (genA)) (Gen.sequence (genAs)),
 }
 
 const RandEven = {
