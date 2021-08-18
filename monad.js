@@ -187,18 +187,14 @@ const RandPair = {
 
 // Return an array of 5 random Ints.
 // With this implementation it should return [1,2,3,4,5]
-const fiveRands =
-      /* ArrayInt */
-
-      Gen.value (Gen.sequence (List.repeat (5) (RandNum.gen))) (Seed.pure (1));
+const fiveRands = // listInt
+  Gen.value (Gen.sequence (List.repeat (5) (RandNum.gen))) (Seed.pure (1));
 
 
 // Return a string of 3 random Chars
 // With this implementation it should return 'ABC'
-const randString3 =
-      /* String */
-
-      (Gen.value (Gen.sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
+const randString3 = // String
+  (Gen.value (Gen.sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
 
 // Tests
 
