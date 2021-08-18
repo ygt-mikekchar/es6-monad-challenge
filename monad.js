@@ -16,6 +16,8 @@
 //   - Whenever possible only a single expression per function.
 //   - Functions are contained in modules.
 
+// Prelude
+// This contains useful tools for the rest of the file
 const Test = {
   expect: label => error => // console effect
     console.log([(error === null) ? 'PASS' : `FAIL (${error})`, '-', label].join(' ')),
@@ -77,6 +79,8 @@ const Fn = {
 Function.prototype['.'] = function (a_b) { // a_c
   return Fn.compose (this) (a_b); };
 
+// Monad Code
+
 // A seed for a random value generator
 const Seed = {
   pure: num => // seed
@@ -115,65 +119,52 @@ const RandNum = {
     [seed, seed + 1],
 };
 
-// Retrun the value of a Rand produced from a GenA given a Seed.
-const generate =
-      genA => seed => /* a */
+const Gen = {
+  // Apply a Seed to a Gen and return the value of the resultant Rand
+  value: genA => seed => // a
+    Rand.value (genA (seed)),
 
-      Rand.value (genA (seed));
+  // Lift the Rand from a Gen and apply a function to its value
+  map: a_b => genA => // gen_b
+    (Rand.map (a_b)) ['.'] (genA),
 
+  // Lift 2 random values from generators and apply them to a function
+  lift2: a_b_c => genA => genB => // genC
+    Gen.apply (Gen.map (a_b_c) (genA)) (genB),
 
-// Lift the Rand from a GenA and apply a function to its value
-const map =
-      (A_B) => GenA => /* GenB */
+  // Apply the next argument to a partially applied function
+  // Not exactly right... Apply is hard to describe... :-P
+  apply: genA_B => genA => // GenB
+    {
+        let resolve =
+            randGenB => /* randB */
+            (Rand.value (randGenB)) (Rand.seed (randGenB));
 
-      (Rand.map (A_B)) ['.'] (GenA);
+        return(
+            resolve ['.'] (Gen.map (a_b => Gen.map (a_b) (genA)) (genA_B))
+        );
+    },
 
+  // Lift a list of generators into a list of random values
+  sequence: listGenA => // genListA
+    {
+        let [genA, ...genAs] = listGenA;
 
-// Apply the next argument to a partially applied function
-// Not exactly right... Apply is hard to describe... :-P
-const apply =
-      GenA_B => GenA => /* GenB */
-      {
-          let resolve =
-              RandGenB => /* RandB */
-              (Rand.value (RandGenB)) (Rand.seed (RandGenB));
+        switch (genA) {
+        case undefined:
+            return Rand.pure ([]);
 
-          return(
-              resolve ['.'] (map (f => map (f) (GenA)) (GenA_B))
-          );
-      };
-
-
-// Lift 2 random values from generators and apply them to a function
-const lift2 =
-      (A_B_C) => GenA => GenB => /* GenC */
-
-      apply (map (A_B_C) (GenA)) (GenB);
-
-
-
-// Lift a list of generators into a list of random values
-const sequence =
-      ListGenA => /* GenListA */
-
-      {
-          let [x, ...xs] = ListGenA;
-
-          switch (x) {
-          case undefined:
-              return Rand.pure ([]);
-
-          default:
-              return apply (map (List.cons) (x)) (sequence (xs));
-          }
-      };
-
+        default:
+            return Gen.apply (Gen.map (List.cons) (genA)) (Gen.sequence (genAs));
+        }
+    },
+}
 
 const RandEven = {
   // Generates an even random Int given a Seed.
   // Remember: GenNum.gen = seed => // rand
   gen: // seed => rand
-    map (x => x * 2) (RandNum.gen),
+    Gen.map (x => x * 2) (RandNum.gen),
 };
 
 const Letter = {
@@ -185,13 +176,13 @@ const Letter = {
 
 const RandLetter = {
   gen: // seed => rand
-    map (Letter.fromNum) (RandNum.gen),
+    Gen.map (Letter.fromNum) (RandNum.gen),
 };
 
 // Generator for a tuple containing a random char and random int
 const RandPair = {
   gen: // seed => rand
-    lift2 (Tuple.pure) (RandLetter.gen) (RandNum.gen),
+    Gen.lift2 (Tuple.pure) (RandLetter.gen) (RandNum.gen),
 };
 
 // Return an array of 5 random Ints.
@@ -199,7 +190,7 @@ const RandPair = {
 const fiveRands =
       /* ArrayInt */
 
-      generate (sequence (List.repeat (5) (RandNum.gen))) (Seed.pure (1));
+      Gen.value (Gen.sequence (List.repeat (5) (RandNum.gen))) (Seed.pure (1));
 
 
 // Return a string of 3 random Chars
@@ -207,7 +198,7 @@ const fiveRands =
 const randString3 =
       /* String */
 
-      (generate (sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
+      (Gen.value (Gen.sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
 
 // Tests
 
@@ -215,8 +206,8 @@ Test.expect ('RandNum.gen')
   (Rand.assert (RandNum.gen (Seed.pure (1)))
     ([1, 2]));
 
-Test.expect ('generate')
-  (Num.assert (generate (RandNum.gen) (Seed.pure (1)))
+Test.expect ('Gen.value')
+  (Num.assert (Gen.value (RandNum.gen) (Seed.pure (1)))
     (1));
 
 Test.expect ('Rand.map')
