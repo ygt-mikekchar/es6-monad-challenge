@@ -27,12 +27,16 @@ const Test = {
     `${a}`
 }
 
-const Num = {
+const Obj = {
   eql: Test.eql,
 
   print: Test.print
 };
-Num.assert = Test.assert (Num);
+Obj.assert = Test.assert (Obj);
+
+const Num = {
+  assert: Obj.assert,
+};
 
 
 // Useful list (array) methods
@@ -168,23 +172,25 @@ const sequence =
 const RandEven = {
   // Generates an even random Int given a Seed.
   // Remember: GenNum.gen = seed => // rand
-  gen: seed => // rand
+  gen: // seed => rand
     map (x => x * 2) (RandNum.gen),
 };
 
 const Letter = {
   fromNum: num => // letter
     String.fromCharCode (num + 64),
+
+  assert: Test.assert,
 };
 
 const RandLetter = {
-  gen: seed => // rand
+  gen: // seed => rand
     map (Letter.fromNum) (RandNum.gen),
 };
 
 // Generator for a tuple containing a random char and random int
 const RandPair = {
-  gen: seed => // rand
+  gen: // seed => rand
     lift2 (Tuple.pure) (RandLetter.gen) (RandNum.gen),
 };
 
@@ -198,23 +204,39 @@ const fiveRands =
 
 // Return a string of 3 random Chars
 // With this implementation it should return 'ABC'
-// const randString3 =
-//       /* String */
-// 
-//       (generate (sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
+const randString3 =
+      /* String */
 
+      (generate (sequence (List.repeat (3) (RandLetter.gen))) (Seed.pure (1))).join('');
+
+// Tests
 
 Test.expect ('RandNum.gen')
   (Rand.assert (RandNum.gen (Seed.pure (1)))
-    ([1, 2]))
+    ([1, 2]));
+
 Test.expect ('generate')
   (Num.assert (generate (RandNum.gen) (Seed.pure (1)))
-    (1))
+    (1));
+
+Test.expect ('Rand.map')
+  (Rand.assert (Rand.map (x => x * 2) ([1, 2]))
+    ([2, 2]));
+
 Test.expect ('RandEven.gen')
   (Rand.assert (RandEven.gen (Seed.pure (1)))
-    ([1, 2]))
-console.log (RandEven.gen (Seed.pure (1)));
-console.log (RandLetter.gen (Seed.pure (1)));
-console.log (RandPair.gen (Seed.pure (1)));
-console.log (fiveRands);
-// console.log (randString3);
+    ([2, 2]));
+
+Test.expect ('RandLetter.gen')
+  (Rand.assert (RandLetter.gen (Seed.pure (1)))
+    (['A', 2]));
+
+// FIXME: Test compares the wrong thing
+//        Make it fail to see what's wrong
+Test.expect ('RandPair.gen')
+  (Tuple.assert (RandPair.gen (Seed.pure (1)))
+    ([['A', 2], 3]));
+
+Test.expect ('fiveRands') (List.assert (fiveRands) ([1, 2, 3, 4, 5]));
+
+Test.expect ('randString3') (Obj.assert (randString3) ('ABC'));
