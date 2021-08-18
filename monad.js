@@ -107,6 +107,10 @@ const Rand = {
   seed: rand => // seed
     rand[1],
 
+  // Use the seed in a randGenB to generate a randB
+  resolve: randGenB => // randB
+    (Rand.value (randGenB)) (Rand.seed (randGenB)),
+
   assert: Tuple.assert
 };
 
@@ -135,15 +139,7 @@ const Gen = {
   // Apply the next argument to a partially applied function
   // Not exactly right... Apply is hard to describe... :-P
   apply: genA_B => genA => // GenB
-    {
-        let resolve =
-            randGenB => /* randB */
-            (Rand.value (randGenB)) (Rand.seed (randGenB));
-
-        return(
-            resolve ['.'] (Gen.map (a_b => Gen.map (a_b) (genA)) (genA_B))
-        );
-    },
+    Rand.resolve ['.'] (Gen.map (a_b => Gen.map (a_b) (genA)) (genA_B)),
 
   // Lift a list of generators into a list of random values
   sequence: listGenA => // genListA
