@@ -120,7 +120,7 @@ const Rand = {
 // This means that successive random numbers increment by 1
 const RandNum = {
   gen: seed => // rand
-    [seed, seed + 1],
+    Rand.pure (seed) (seed + 1),
 };
 
 const Gen = {
